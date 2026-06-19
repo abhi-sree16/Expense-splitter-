@@ -6,6 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface SettlementInput {
+  fromMemberId: number;
+  toMemberId: number;
+  /** @minimum 0.01 */
+  amount: number;
+  note?: string;
 }

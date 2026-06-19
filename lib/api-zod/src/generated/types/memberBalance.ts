@@ -6,6 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface MemberBalance {
+  memberId: number;
+  memberName: string;
+  avatarColor?: string;
+  paid: number;
+  owes: number;
+  netBalance: number;
 }

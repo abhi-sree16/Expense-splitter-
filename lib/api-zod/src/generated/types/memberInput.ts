@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface MemberInput {
+  /** @minLength 1 */
+  name: string;
+  email?: string;
+  avatarColor?: string;
 }

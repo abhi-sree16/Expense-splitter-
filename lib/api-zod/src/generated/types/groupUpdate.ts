@@ -6,6 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface GroupUpdate {
+  /** @minLength 1 */
+  name?: string;
+  description?: string;
+  currency?: string;
+  category?: string;
+  emoji?: string;
 }

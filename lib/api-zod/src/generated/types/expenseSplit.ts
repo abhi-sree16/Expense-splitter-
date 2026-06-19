@@ -6,6 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface ExpenseSplit {
+  id: number;
+  expenseId: number;
+  memberId: number;
+  amount: number;
+  /** @nullable */
+  percentage?: number | null;
 }

@@ -2,21 +2,29 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: SplitSmart — Creative Expense Splitter API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: groups
+    description: Expense groups (trips, roommates, events)
+  - name: members
+    description: Group members
+  - name: expenses
+    description: Expenses within a group
+  - name: settlements
+    description: Debt settlements between members
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +32,574 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Groups ──────────────────────────────────────────────────────────────────
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [groups]
+      summary: List all groups
+      responses:
+        "200":
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Group"
+    post:
+      operationId: createGroup
+      tags: [groups]
+      summary: Create a new expense group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+
+  /groups/{id}:
+    get:
+      operationId: getGroup
+      tags: [groups]
+      summary: Get a group by ID
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Group details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateGroup
+      tags: [groups]
+      summary: Update a group
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteGroup
+      tags: [groups]
+      summary: Delete a group
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /groups/{id}/summary:
+    get:
+      operationId: getGroupSummary
+      tags: [groups]
+      summary: Get spending summary, category breakdown, and balances for a group
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Group summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSummary"
+        "404":
+          description: Not found
+
+  /groups/{id}/balances:
+    get:
+      operationId: getGroupBalances
+      tags: [groups]
+      summary: Get net balance for every member in the group
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Member balances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberBalance"
+        "404":
+          description: Not found
+
+  /groups/{id}/optimal-settlements:
+    get:
+      operationId: getOptimalSettlements
+      tags: [groups]
+      summary: Get the minimum number of transactions to settle all debts
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Optimal settlement plan
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SettlementSuggestion"
+        "404":
+          description: Not found
+
+  # ── Members ─────────────────────────────────────────────────────────────────
+  /groups/{groupId}/members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List members of a group
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+    post:
+      operationId: addMember
+      tags: [members]
+      summary: Add a member to a group
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: Group not found
+
+  /groups/{groupId}/members/{id}:
+    patch:
+      operationId: updateMember
+      tags: [members]
+      summary: Update a member
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteMember
+      tags: [members]
+      summary: Remove a member from a group
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204":
+          description: Removed
+        "404":
+          description: Not found
+
+  # ── Expenses ─────────────────────────────────────────────────────────────────
+  /groups/{groupId}/expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List expenses in a group
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Add an expense to a group
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          description: Validation error
+        "404":
+          description: Group not found
+
+  /groups/{groupId}/expenses/{id}:
+    get:
+      operationId: getExpense
+      tags: [expenses]
+      summary: Get expense details including splits
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Expense with splits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Settlements ──────────────────────────────────────────────────────────────
+  /groups/{groupId}/settlements:
+    get:
+      operationId: listSettlements
+      tags: [settlements]
+      summary: List recorded settlements in a group
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Settlements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Settlement"
+    post:
+      operationId: createSettlement
+      tags: [settlements]
+      summary: Record a settlement payment
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettlementInput"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settlement"
+        "404":
+          description: Not found
+
+  /groups/{groupId}/settlements/{id}:
+    delete:
+      operationId: deleteSettlement
+      tags: [settlements]
+      summary: Remove a settlement record
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204":
+          description: Removed
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
 
+    # ── Groups ────────────────────────────────────────────────────────────────
+    Group:
+      type: object
+      required: [id, name, currency, category, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        currency: { type: string }
+        category: { type: string }
+        emoji: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    GroupInput:
+      type: object
+      required: [name, currency, category]
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        currency: { type: string, minLength: 1 }
+        category: { type: string }
+        emoji: { type: string }
+
+    GroupUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        currency: { type: string }
+        category: { type: string }
+        emoji: { type: string }
+
+    GroupSummary:
+      type: object
+      required: [groupId, totalSpent, expenseCount, memberCount, categoryBreakdown, topSpender]
+      properties:
+        groupId: { type: integer }
+        totalSpent: { type: number }
+        expenseCount: { type: integer }
+        memberCount: { type: integer }
+        categoryBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryStat"
+        topSpender: { type: ["string", "null"] }
+        mostExpensiveCategory: { type: ["string", "null"] }
+
+    CategoryStat:
+      type: object
+      required: [category, total, count]
+      properties:
+        category: { type: string }
+        total: { type: number }
+        count: { type: integer }
+
+    MemberBalance:
+      type: object
+      required: [memberId, memberName, paid, owes, netBalance]
+      properties:
+        memberId: { type: integer }
+        memberName: { type: string }
+        avatarColor: { type: string }
+        paid: { type: number }
+        owes: { type: number }
+        netBalance: { type: number }
+
+    SettlementSuggestion:
+      type: object
+      required: [fromMemberId, fromMemberName, toMemberId, toMemberName, amount]
+      properties:
+        fromMemberId: { type: integer }
+        fromMemberName: { type: string }
+        toMemberId: { type: integer }
+        toMemberName: { type: string }
+        amount: { type: number }
+
+    # ── Members ───────────────────────────────────────────────────────────────
+    Member:
+      type: object
+      required: [id, groupId, name, avatarColor, createdAt]
+      properties:
+        id: { type: integer }
+        groupId: { type: integer }
+        name: { type: string }
+        email: { type: ["string", "null"] }
+        avatarColor: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    MemberInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string }
+        avatarColor: { type: string }
+
+    MemberUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string }
+        avatarColor: { type: string }
+
+    # ── Expenses ──────────────────────────────────────────────────────────────
+    Expense:
+      type: object
+      required: [id, groupId, paidById, title, amount, category, splitType, date, createdAt]
+      properties:
+        id: { type: integer }
+        groupId: { type: integer }
+        paidById: { type: integer }
+        title: { type: string }
+        amount: { type: number }
+        category: { type: string }
+        splitType: { type: string }
+        notes: { type: ["string", "null"] }
+        date: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    ExpenseDetail:
+      type: object
+      required: [id, groupId, paidById, title, amount, category, splitType, date, createdAt, splits]
+      properties:
+        id: { type: integer }
+        groupId: { type: integer }
+        paidById: { type: integer }
+        title: { type: string }
+        amount: { type: number }
+        category: { type: string }
+        splitType: { type: string }
+        notes: { type: ["string", "null"] }
+        date: { type: string }
+        createdAt: { type: string, format: date-time }
+        splits:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseSplit"
+
+    ExpenseSplit:
+      type: object
+      required: [id, expenseId, memberId, amount]
+      properties:
+        id: { type: integer }
+        expenseId: { type: integer }
+        memberId: { type: integer }
+        amount: { type: number }
+        percentage: { type: ["number", "null"] }
+
+    ExpenseInput:
+      type: object
+      required: [paidById, title, amount, category, splitType, date]
+      properties:
+        paidById: { type: integer }
+        title: { type: string, minLength: 1 }
+        amount: { type: number, minimum: 0.01 }
+        category: { type: string }
+        splitType: { type: string }
+        notes: { type: string }
+        date: { type: string }
+        splits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SplitInput"
+
+    SplitInput:
+      type: object
+      required: [memberId]
+      properties:
+        memberId: { type: integer }
+        amount: { type: number }
+        percentage: { type: number }
+
+    ExpenseUpdate:
+      type: object
+      properties:
+        paidById: { type: integer }
+        title: { type: string, minLength: 1 }
+        amount: { type: number, minimum: 0.01 }
+        category: { type: string }
+        notes: { type: string }
+        date: { type: string }
+
+    # ── Settlements ───────────────────────────────────────────────────────────
+    Settlement:
+      type: object
+      required: [id, groupId, fromMemberId, toMemberId, amount, settledAt]
+      properties:
+        id: { type: integer }
+        groupId: { type: integer }
+        fromMemberId: { type: integer }
+        toMemberId: { type: integer }
+        amount: { type: number }
+        note: { type: ["string", "null"] }
+        settledAt: { type: string, format: date-time }
+
+    SettlementInput:
+      type: object
+      required: [fromMemberId, toMemberId, amount]
+      properties:
+        fromMemberId: { type: integer }
+        toMemberId: { type: integer }
+        amount: { type: number, minimum: 0.01 }
+        note: { type: string }
