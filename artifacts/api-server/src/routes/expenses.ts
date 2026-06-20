@@ -44,7 +44,8 @@ router.get("/groups/:groupId/expenses", async (req, res): Promise<void> => {
     .where(eq(expensesTable.groupId, params.data.groupId))
     .orderBy(expensesTable.date);
 
-  res.json(ListExpensesResponse.parse(expenses));
+  const coerced = expenses.map((e) => ({ ...e, amount: parseFloat(e.amount) }));
+  res.json(ListExpensesResponse.parse(coerced));
 });
 
 router.post("/groups/:groupId/expenses", async (req, res): Promise<void> => {
@@ -117,7 +118,7 @@ router.post("/groups/:groupId/expenses", async (req, res): Promise<void> => {
     await db.insert(expenseSplitsTable).values(splitsToInsert);
   }
 
-  res.status(201).json(expense);
+  res.status(201).json({ ...expense, amount: parseFloat(expense.amount) });
 });
 
 router.get(
@@ -149,7 +150,8 @@ router.get(
       .from(expenseSplitsTable)
       .where(eq(expenseSplitsTable.expenseId, expense.id));
 
-    res.json(GetExpenseResponse.parse({ ...expense, splits }));
+    const coercedSplits = splits.map((s) => ({ ...s, amount: parseFloat(s.amount), percentage: s.percentage ? parseFloat(s.percentage) : null }));
+    res.json(GetExpenseResponse.parse({ ...expense, amount: parseFloat(expense.amount), splits: coercedSplits }));
   }
 );
 
